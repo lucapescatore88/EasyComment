@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EasyComment</title>
+
+    <script src = "https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="utils.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+
+    <script src="comment.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+
+    <style> 
+    /* Resetting the browser defaults */ 
+    input:focus, select:focus, textarea:focus { 
+    outline: 1 !important; 
+    outline-color: rgb(77, 144, 254) !important; 
+    outline-offset: -2px !important; 
+    outline-style: auto !important; 
+    outline-width: 5px !important; 
+    } 
+    </style>
+
+</head>
+
+<body ng-app="CommentsApp" ng-controller = "CommentsCtrl">
+
+<div class="container">
+  <div class="jumbotron">
+    <h1>EasyComment</h1> 
+
+    <h2 id="papername"></h2>
+
+    <div class="form-group">
+
+        <div class="row">
+        <div class="col-sm-6">
+        <label for="type">Type:</label>
+        <select class="form-control" id="type" ng-model="CommentType">
+            <option value='Main' id="opt-Main">Main</option>
+            <option value='General' id="opt-General">General</option>
+            <option value='Abstract' id="opt-Abstract">Title and abstract</option>
+            <option value='References' id="opt-References">References</option>
+        </select>
+        </div>
+        <div class="col-sm-4"></div>
+        <div class="col-sm-2">Last line: {{lastline}}</div>
+        </div>
+
+        <div class="row" ng-show="!hideoption">
+        <div class="col-sm-6">
+        <label for="severity">Severity (*):</label>
+        <select class="form-control" id="severity">
+            <option value='Minor'>Minor</option>
+            <option value='Major'>Major</option>
+        </select>
+        </div>
+        <div class="col-sm-6">
+        <label for="issue">Issue (*):</label>
+        <select class="form-control" id="issue">
+            <option value='Unspecified'>Unspecified</option>
+            <option value='Physics'>Physics</option>
+            <option value='Clarification'>Clarification</option>
+            <option value='Typo'>Typo</option>
+            <option value='Rewording'>Rewording</option>
+        </select>
+        </div> 
+        </div>
+
+        <div class="row" ng-show="(CommentType=='Main' || CommentType=='References')">
+        
+        <div class="col-sm-6" ng-show="CommentType=='Main'">
+            <label for="lines" ng-show="CommentType=='Main'">Lines:</label>
+            <input type="text" class="form-control" id="lines" 
+            data-toggle="tooltip" title="To put tables and figures on a specific line type 'L{number}' at the end, e.g Tab 5 L60."
+            placeholder="e.g. 103 or 103-121 or Fig 12 (L 10) or Tab 10 (L 20)">
+        </div>
+        
+        <div class="col-sm-6" ng-show="CommentType=='References'">
+            <label for="refs">Ref:</label>
+            <input type="text" class="form-control" id="refs" placeholder="e.g. 4">
+        </div> 
+
+        <div class="col-sm-6" ng-show="CommentType=='Main' && !hideoption">
+            <label for="section">Section (*):</label>
+            <input type="text" class="form-control" id="section" placeholder="e.g. 7 or 7.4 or A">
+        </div>
+        </div>
+        <label for="comment">Comment:</label>
+        <textarea class="form-control" id="comment" placeholder="I think this and that is wrong" rows="3"></textarea>
+    </div>
+
+    <div class="col-sm-8">
+        <button type="button" class="btn btn-primary" ng-click="save()">
+        <span class="glyphicon glyphicon-floppy-save" style="margin-right:5px"></span>Save comment</button>
+        <button type="button" class="btn btn-primary" ng-click="clear()">Clear</button>
+        <button type="button" class="btn btn-primary" ng-click="save(true)" ng-disabled="erase_enabled">Erase</button>
+    </div>
+    <div class="col-sm-4">(*) fields are optional. <input type="checkbox" id="hideoptional" 
+        ng-click="togglehide()"> Check to hide them</div>
+
+  </div>
+</div>
+
+<div class="container">
+    <div class="jumbotron">
+    <h4> Existing comments around what you are working on:</h4><br>
+    <ul>
+        <li ng-if="clinecomm.Prev!=''"> <b>[Prev - line {{clinecomm.PrevLine}}]</b> : {{ clinecomm.Prev }} </li>
+        <li ng-if="clinecomm.Cur!=''"> <b>[Current - line {{curl}}]</b> : {{ clinecomm.Cur }} (<b>{{clinecomm.CurAuthor}}</b>)</li>
+        <li ng-if="clinecomm.Next!=''"> <b>[Next - line {{clinecomm.NextLine}}]</b> : {{ clinecomm.Next }} </li>
+    </ul>
+    </div>
+</div>
+
+<div class="container">
+    <div class="jumbotron">
+    <div class="row">
+    <div class="col-sm-8">
+        <h2>Comments on {{params.paper.substring(0,params.paper.indexOf("--"))}}</h2>
+    </div>
+        <div class="col-sm-4">
+        <button class="btn btn-primary" ng-click="download()">
+            <span class="glyphicon glyphicon-download-alt" style="margin-right:5px"></span>Download as file</button>
+        <button class="btn btn-primary">
+            <a href={{'papers/'+params.paper+'.json'}} download style="color:white">
+            <span class="glyphicon glyphicon-download-alt" style="margin-right:5px"></span>Download JSON</button></a>
+        </div>
+    <div class="col-sm-12">
+        <input type="checkbox" id="author_checkbox" value="author" 
+            ng-click="load(true,false)"/> Show only my comments
+        <input type="checkbox" id="severity_checkbox" value="major" 
+            ng-click="load(true,false)" style="margin-left:5px"/> Show only major comments
+    </div>
+    </div>
+
+    <h3>General</h3>
+    <div>
+    <table class="table table-hover" border='1px'>
+        <col width="15%">
+        <col width="85%">
+        <tr>
+            <th> Severity </th> 
+            <th> Comment </th> 
+        </tr>
+        <tr ng-repeat = "comment in params.comments track by $index" ng-if="comment.type=='General' && show(comment)" ng-click="go(comment)">
+                <td>{{ comment.severity }}</td>
+                <td>{{ comment.comment }}</td>
+        </tr>
+    </table>
+    </div>
+
+    <h3>Abstract</h3>
+    
+    <table class="table table-hover" border='1px'>
+        <col width="15%">
+        <col width="85%">
+        <tr>
+            <th> Severity </th> 
+            <th> Comment </th> 
+        </tr>
+        <tr ng-repeat = "comment in params.comments track by $index" ng-if="comment.type=='Abstract' && show(comment)" ng-click="go(comment)">
+                <td>{{ comment.severity }}</td>
+                <td><div>{{ comment.comment }}</div></td>
+        </tr>
+    </table>
+
+    <h3>Main</h3>
+    <table class="table table-hover" border='1px'>
+        <col width="15%">
+        <col width="15%">
+        <col width="70%">
+        <tr>
+            <th> Line </th> 
+            <th> Severity </th> 
+            <th> Comment </th> 
+        </tr>
+        <tr ng-repeat = "comment in params.comments | orderBy : 'line' track by $index" 
+                   ng-if="comment.type=='Main' && show(comment)" ng-click="go(comment)">
+               <td ng-if="comment.line_end > -1">{{ comment.line }} - {{ comment.line_end }}</td>
+               <td ng-if="comment.line_end < 0 && comment.lstr.indexOf('Tab') < 0 && comment.lstr.indexOf('Fig') < 0 && comment.lstr.indexOf('Eq') < 0">{{ comment.line }}</td>
+               <td ng-if="comment.lstr.indexOf('Tab') > -1 || comment.lstr.indexOf('Fig') > -1 || comment.lstr.indexOf('Eq') > -1">{{ comment.lstr }}</td>
+               <td>{{ comment.severity }}</td>
+               <td>{{ comment.comment }}</td>
+        </tr>
+        </tr>
+    </table>
+
+    <h3>References</h3>
+    
+    <table class="table table-hover" border='1px'>
+        <col width="15%">
+        <col width="15%">
+        <col width="70%">
+        <tr>
+            <th> Ref </th> 
+            <th> Severity </th> 
+            <th> Comment </th> 
+        </tr>
+        <tr ng-repeat = "comment in params.comments track by $index" ng-if="comment.type=='References' && show(comment)" ng-click="go(comment)">
+                <td>{{ comment.lstr }}</td>
+                <td>{{ comment.severity }}</td>
+                <td>{{ comment.comment }}</td>
+        </tr>
+    </table>
+    </div>
+    <div style='display:none' id='clicktoreload' ng-click=""></div>
+</div>
+
+<div class="container" id="signature"></div> 
+<script>
+    $("#signature").load("signature.html");
+</script>
+ 
+</body>
+</html>

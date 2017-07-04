@@ -1,0 +1,31 @@
+
+h1{
+   font-family: 'Source Sans Pro', sans-serif;    
+}
+
+.tooltip-inner {
+    white-space: pre-wrap;
+}
+
+table {
+    table-layout:fixed;
+    
+    /* For Firefox */
+    white-space: pre-wrap;
+
+    /* For Chrome and IE */
+    word-wrap: break-word;
+}
+
+table td {
+    word-wrap: break-word;         
+    overflow-wrap: break-word;    
+}
+
+div {
+    word-wrap: break-word;        
+    overflow-wrap: break-word;
+    width: 100%;
+}
+
+
